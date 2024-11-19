@@ -36,7 +36,7 @@ namespace Api_intro.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] GroupCreateDto request)
         {
-            if(!ModelState.IsValid) return BadRequest(ModelState);
+            if(!ModelState.IsValid || request.Capacity == 0) return BadRequest("Field can't be null");
             await _groupService.CreateAsync(request);
             return CreatedAtAction(nameof(Create), "Successfully created");
         }

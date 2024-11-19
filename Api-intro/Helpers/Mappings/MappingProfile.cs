@@ -1,6 +1,7 @@
 ﻿using Api_intro.DTOs.City;
 using Api_intro.DTOs.Countries;
 using Api_intro.DTOs.Groups;
+using Api_intro.DTOs.Student;
 using Api_intro.Models;
 using AutoMapper;
 
@@ -32,6 +33,18 @@ namespace Api_intro.Helpers.Mappings
             CreateMap<Group, GroupDto>();
             CreateMap<GroupCreateDto, Group>();
             CreateMap<GroupEditDto, Group>()
+                .ForAllMembers(opts =>
+                {
+                    opts.AllowNull();
+                    opts.Condition((src, dest, srcMember) => srcMember != null);
+                });
+
+
+            CreateMap<Student, StudentDto>()
+            .ForMember(dest => dest.GroupName, opt => opt.MapFrom(src => src.Group.Name));
+
+            CreateMap<StudentCreateDto, Student>();
+            CreateMap<StudentEditDto, Student>()
                 .ForAllMembers(opts =>
                 {
                     opts.AllowNull();

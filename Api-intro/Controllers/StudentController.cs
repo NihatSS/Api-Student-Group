@@ -1,8 +1,9 @@
 ﻿using Api_intro.Data;
+using Api_intro.DTOs.Student;
+using Api_intro.Helpers.Exceptions;
 using Api_intro.Models;
-using Microsoft.AspNetCore.Http;
+using Api_intro.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Api_intro.Controllers
 {
@@ -10,52 +11,91 @@ namespace Api_intro.Controllers
     [ApiController]
     public class StudentController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        public StudentController(AppDbContext context)
-        {
-            _context = context;
-        }
+        private readonly IStudentService _studentService;
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] Student request)
+        public StudentController(IStudentService studentService)
         {
-            await _context.Students.AddAsync(request);
-            await _context.SaveChangesAsync();
-            return CreatedAtAction(nameof(Create), request);
+            _studentService = studentService;
         }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            return Ok(await _context.Students.ToListAsync());
+            var students = await _studentService.GetAllAsync();
+            return Ok(students);
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetById([FromRoute] int id)
+        {
+            var student = await _studentService.GetByIdAsync(id);
+            if (student is null) return NotFound();
+            return Ok(student);
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] StudentCreateDto request)
+        {
+            if (!ModelState.IsValid || request.Age == 0 || request.GroupId == 0) return BadRequest();
+            await _studentService.CreateAsync(request);
+            return CreatedAtAction(nameof(GetById), new { id = request.GroupId }, request);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Edit([FromRoute] int id, [FromBody] StudentEditDto request)
+        {
+            try
+            {
+                await _studentService.EditAsync(id, request);
+                return Ok();
+            }
+            catch (NotFoundException)
+            {
+                return NotFound();
+            }
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {
-            Student student = await _context.Students.FindAsync(id);
-
-            if (student is null) return NotFound();
-
-            _context.Students.Remove(student);
-
-            await _context.SaveChangesAsync();
-
-            return Ok();
-
+            try
+            {
+                await _studentService.DeleteAsync(id);
+                return Ok();
+            }
+            catch (NotFoundException)
+            {
+                return NotFound();
+            }
         }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Edit([FromRoute] int id, [FromBody] Student request)
+        [HttpPost("{id}/{groupId}")]
+        public async Task<IActionResult> ChangeGroup([FromRoute] int id, [FromRoute] int groupId)
         {
-            var student = await _context.Students.FindAsync(id);
-            if (student is null) return NotFound();
-            student.FullName = request.FullName ?? student.FullName;
-            student.Age = request.Age ?? student.Age;
-            await _context.SaveChangesAsync();
-            return Ok();
+            try
+            {
+                await _studentService.ChangeGroupAsync(id, groupId);
+                return Ok();
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
         }
 
+        [HttpPost("{id}/{groupId}")]
+        public async Task<IActionResult> AddToGroup([FromRoute] int id, [FromRoute] int groupId)
+        {
+            try
+            {
+                await _studentService.AddToGroupAsync(id, groupId);
+                return Ok();
+            }
+            catch (NotFoundException ex)
+            {
+                return NotFound(ex.Message);
+            }
+        }
 
     }
 }
